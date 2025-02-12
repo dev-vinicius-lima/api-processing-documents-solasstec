@@ -20,16 +20,15 @@ model Department {
 }
 
 model Document {
-  id               Int               @id @default(autoincrement())
-  number           String            @unique
-  type             String
-  title            String
-  description      String
-  file             String
-  registrationDate DateTime          @default(now())
-  trackingHistory  HistoryTracking[]
-  department       Department?       @relation(fields: [departmentId], references: [id])
-  departmentId     Int?
+  id              Int               @id @default(autoincrement())
+  type            String
+  title           String
+  description     String
+  file            String
+  createdAt       DateTime          @default(now())
+  trackingHistory HistoryTracking[]
+  department      Department?       @relation(fields: [departmentId], references: [id])
+  departmentId    Int?
 }
 
 model HistoryTracking {
