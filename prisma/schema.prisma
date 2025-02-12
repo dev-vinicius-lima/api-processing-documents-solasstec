@@ -1,0 +1,46 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Department {
+  id              Int               @id @default(autoincrement())
+  acronym         String
+  description     String
+  documents       Document[]
+  historySent     HistoryTracking[] @relation("sentFromDepartment")
+  historyReceived HistoryTracking[] @relation("receivedFromDepartment")
+  HistoryTracking HistoryTracking[]
+
+  @@map(name: "departments")
+}
+
+model Document {
+  id               Int               @id @default(autoincrement())
+  number           String            @unique
+  type             String
+  title            String
+  description      String
+  file             String
+  registrationDate DateTime          @default(now())
+  trackingHistory  HistoryTracking[]
+  department       Department?       @relation(fields: [departmentId], references: [id])
+  departmentId     Int?
+}
+
+model HistoryTracking {
+  id               Int         @id @default(autoincrement())
+  documentId       Int
+  sendingDept      Int
+  receivingDept    Int
+  dateTime         DateTime    @default(now())
+  document         Document    @relation(fields: [documentId], references: [id])
+  sendingDeptRef   Department  @relation(name: "sentFromDepartment", fields: [sendingDept], references: [id])
+  receivingDeptRef Department  @relation(name: "receivedFromDepartment", fields: [receivingDept], references: [id])
+  department       Department? @relation(fields: [departmentId], references: [id])
+  departmentId     Int?
+}
