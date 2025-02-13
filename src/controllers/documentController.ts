@@ -23,7 +23,7 @@ export const createDocument = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const { type, title, description, departmentId } = req.body
+  const { type, title, description } = req.body
   const pdfFile = req.file
   if (!pdfFile) {
     res.status(400).json({ error: "Arquivo PDF é obrigatório." })
@@ -37,7 +37,14 @@ export const createDocument = async (
         description,
         file: pdfFile?.filename as string,
         createdAt: new Date(),
-        departmentId: departmentId ? parseInt(departmentId, 10) : null,
+      },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        description: true,
+        file: true,
+        createdAt: true,
       },
     })
     res.status(201).json(newDocument)
@@ -69,10 +76,45 @@ export const getDocumentByNumber = async (
 
 export const listDocuments = async (req: Request, res: Response) => {
   try {
-    const documents = await prisma.document.findMany()
-    res.status(200).json(documents)
+    const documents = await prisma.document.findMany({
+      include: {
+        trackingHistory: {
+          include: {
+            sendingDeptRef: true,
+            receivingDeptRef: true,
+          },
+        },
+      },
+    })
+
+    const transformedDocuments = documents.map((doc) => {
+      const lastTracking = doc.trackingHistory[doc.trackingHistory.length - 1]
+      return {
+        id: doc.id,
+        type: doc.type,
+        title: doc.title,
+        description: doc.description,
+        file: doc.file,
+        createdAt: doc.createdAt,
+        departmentId: doc.departmentId,
+        number: String(doc.id),
+        sectorShipping: lastTracking
+          ? lastTracking.sendingDeptRef?.description
+          : "N/A",
+        dateTimeSubmission: new Date(doc.createdAt).toLocaleString(),
+        ReceivingSector: lastTracking
+          ? lastTracking.receivingDeptRef?.description
+          : "N/A",
+        dateTimeReceived:
+          lastTracking && lastTracking.receivingDept
+            ? new Date(doc.updatedAt).toLocaleString()
+            : "N/A",
+      }
+    })
+
+    res.status(200).json(transformedDocuments)
   } catch (error) {
-    res.status(500).json({ error: "Erro ao listar documentos" })
+    res.status(500).json({ error: "Error listing documents" })
   }
 }
 
