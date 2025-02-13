@@ -38,7 +38,7 @@ model HistoryTracking {
   sendingDept      Int
   receivingDept    Int
   dateTime         DateTime    @default(now())
-  document         Document    @relation(fields: [documentId], references: [id])
+  document         Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
   sendingDeptRef   Department  @relation(name: "sentFromDepartment", fields: [sendingDept], references: [id])
   receivingDeptRef Department  @relation(name: "receivedFromDepartment", fields: [receivingDept], references: [id])
   department       Department? @relation(fields: [departmentId], references: [id])

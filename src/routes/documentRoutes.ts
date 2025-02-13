@@ -5,6 +5,7 @@ import {
   getDocumentByNumber,
   sendDocument,
   receiveDocument,
+  deleteDocument,
 } from "../controllers/documentController"
 import { upload } from "../middleware/upload"
 
@@ -20,5 +21,8 @@ router.post("/send", async (req, res) => {
 })
 router.post("/receive", async (req, res) => {
   await receiveDocument(req, res)
+})
+router.delete("/:number", async (req, res) => {
+  await deleteDocument(req, res)
 })
 export default router

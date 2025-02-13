@@ -192,3 +192,18 @@ export const receiveDocument = async (req: Request, res: Response) => {
 
   res.status(200).json({ message: "Documento recebido com sucesso." })
 }
+
+export const deleteDocument = async (req: Request, res: Response) => {
+  const { number } = req.params
+
+  const document = await prisma.document.findUnique({
+    where: { id: Number(number) },
+  })
+
+  if (!document) {
+    res.status(404).json({ message: "Documento nao encontrado" })
+  }
+
+  await prisma.document.delete({ where: { id: Number(number) } })
+  res.status(200).json({ message: "Documento deletado com sucesso" })
+}

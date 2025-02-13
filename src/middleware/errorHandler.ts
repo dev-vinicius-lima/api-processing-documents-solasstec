@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express"
 
-export const errorHandler = (
+const errorHandler = (
   err: any,
   req: Request,
   res: Response,
@@ -9,3 +9,5 @@ export const errorHandler = (
   console.error(err)
   res.status(500).json({ message: "Ocorreu um erro interno." })
 }
+
+export default errorHandler
