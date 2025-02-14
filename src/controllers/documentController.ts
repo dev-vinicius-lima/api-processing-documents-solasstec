@@ -1,4 +1,3 @@
-// controllers/documentController.ts
 import { NextFunction, Request, Response } from "express"
 import { PrismaClient } from "@prisma/client"
 import multer from "multer"
@@ -23,10 +22,18 @@ export const createDocument = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const { type, title, description } = req.body
+  const { type, title, description, departmentId } = req.body
   const pdfFile = req.file
   if (!pdfFile) {
     res.status(400).json({ error: "Arquivo PDF é obrigatório." })
+  }
+
+  const department = await prisma.department.findUnique({
+    where: { id: Number(departmentId) },
+  })
+
+  if (!department) {
+    res.status(404).json({ error: "Setor nao encontrado." })
   }
 
   try {
@@ -37,14 +44,8 @@ export const createDocument = async (
         description,
         file: pdfFile?.filename as string,
         createdAt: new Date(),
-      },
-      select: {
-        id: true,
-        type: true,
-        title: true,
-        description: true,
-        file: true,
-        createdAt: true,
+        departmentId: Number(departmentId),
+        sectorShipping: department?.acronym,
       },
     })
     res.status(201).json(newDocument)
@@ -82,6 +83,7 @@ export const listDocuments = async (req: Request, res: Response) => {
           include: {
             sendingDeptRef: true,
             receivingDeptRef: true,
+            department: true,
           },
         },
       },
@@ -100,7 +102,7 @@ export const listDocuments = async (req: Request, res: Response) => {
         number: String(doc.id),
         sectorShipping: lastTracking
           ? lastTracking.sendingDeptRef?.description
-          : "N/A",
+          : doc.sectorShipping || "N/A",
         dateTimeSubmission: new Date(doc.createdAt).toLocaleString(),
         ReceivingSector: lastTracking
           ? lastTracking.receivingDeptRef?.description

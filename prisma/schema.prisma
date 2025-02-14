@@ -30,6 +30,7 @@ model Document {
   trackingHistory HistoryTracking[]
   department      Department?       @relation(fields: [departmentId], references: [id])
   departmentId    Int?
+  sectorShipping  String?
 }
 
 model HistoryTracking {
