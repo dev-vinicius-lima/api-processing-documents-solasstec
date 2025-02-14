@@ -65,14 +65,20 @@ export const getDocumentByNumber = async (
     include: {
       trackingHistory: {
         include: { sendingDeptRef: true, receivingDeptRef: true },
+        orderBy: { createdAt: "asc" },
       },
-    } as any,
+    },
   })
 
   if (!document) {
     res.status(404).json({ message: "Documento não encontrado" })
   }
-  res.status(200).json(document)
+  const status = inferDocumentStatus(
+    document?.trackingHistory!,
+    document?.isReceived!
+  )
+
+  res.status(200).json({ ...document, status })
 }
 
 export const listDocuments = async (req: Request, res: Response) => {
@@ -91,6 +97,10 @@ export const listDocuments = async (req: Request, res: Response) => {
 
     const transformedDocuments = documents.map((doc) => {
       const lastTracking = doc.trackingHistory[doc.trackingHistory.length - 1]
+      const isSend = lastTracking && lastTracking.receivingDept ? true : false
+
+      const status = inferDocumentStatus(doc.trackingHistory, isSend)
+
       return {
         id: doc.id,
         type: doc.type,
@@ -111,6 +121,9 @@ export const listDocuments = async (req: Request, res: Response) => {
           lastTracking && lastTracking.receivingDept
             ? new Date(doc.updatedAt).toLocaleString()
             : "N/A",
+        isSend,
+        isReceived: doc.isReceived,
+        status,
       }
     })
 
@@ -121,16 +134,33 @@ export const listDocuments = async (req: Request, res: Response) => {
 }
 
 export const sendDocument = async (req: Request, res: Response) => {
+  console.log("Received body:", req.body)
+
   const { documentId, receivingDepartmentId } = req.body
 
+  if (!documentId) {
+    return res.status(400).json({ error: "Document ID is required." })
+  }
   const document = await prisma.document.findUnique({
-    where: { id: documentId },
+    where: { id: Number(documentId) },
     include: { trackingHistory: true },
   })
+
+  if (!receivingDepartmentId) {
+    return res
+      .status(400)
+      .json({ error: "Receiving department ID is required." })
+  }
 
   if (!document) {
     return res.status(404).json({ message: "Document not found" })
   }
+
+  const departmentId = Number(receivingDepartmentId)
+  if (isNaN(departmentId)) {
+    return res.status(400).json({ error: "Invalid receiving department ID." })
+  }
+
   const sendingDepartmentId = document.departmentId
   if (sendingDepartmentId === receivingDepartmentId) {
     return res.status(400).json({
@@ -139,7 +169,7 @@ export const sendDocument = async (req: Request, res: Response) => {
   }
 
   const department = await prisma.department.findUnique({
-    where: { id: Number(document.departmentId) },
+    where: { id: departmentId },
   })
 
   if (!department) {
@@ -165,14 +195,14 @@ export const sendDocument = async (req: Request, res: Response) => {
     },
   })
 
-  res.status(201).json(historyEntry)
+  res.status(200).json(historyEntry)
 }
 
 export const receiveDocument = async (req: Request, res: Response) => {
   const { documentId } = req.body
 
   const document = await prisma.document.findUnique({
-    where: { id: documentId },
+    where: { id: Number(documentId) },
     include: { trackingHistory: true },
   })
 
@@ -192,7 +222,18 @@ export const receiveDocument = async (req: Request, res: Response) => {
     data: { receivingDept: lastHistoryEntry.receivingDept },
   })
 
-  res.status(200).json({ message: "Documento recebido com sucesso." })
+  await prisma.document.update({
+    where: { id: Number(documentId) },
+    data: {
+      isReceived: true,
+      dateTimeReceived: new Date().toISOString(),
+    },
+  })
+
+  res.status(200).json({
+    message: "Documento recebido com sucesso",
+    historyEntry: lastHistoryEntry,
+  })
 }
 
 export const deleteDocument = async (req: Request, res: Response) => {
@@ -208,4 +249,76 @@ export const deleteDocument = async (req: Request, res: Response) => {
 
   await prisma.document.delete({ where: { id: Number(number) } })
   res.status(200).json({ message: "Documento deletado com sucesso" })
+}
+
+const inferDocumentStatus = (trackingHistory: any[], isReceived: boolean) => {
+  if (trackingHistory.length === 0) {
+    return "Novo"
+  }
+
+  const lastEntry = trackingHistory[trackingHistory.length - 1]
+
+  if (isReceived) {
+    return "Recebido"
+  } else if (lastEntry.receivingDept) {
+    return "Enviado"
+  } else {
+    return "Novo"
+  }
+}
+export const getDocumentHistory = async (req: Request, res: Response) => {
+  const { documentId } = req.params
+  try {
+    const document = await prisma.document.findUnique({
+      where: { id: Number(documentId) },
+      include: {
+        trackingHistory: {
+          include: {
+            sendingDeptRef: true,
+            receivingDeptRef: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    })
+
+    if (!document) {
+      return res.status(404).json({ message: "Documento não encontrado" })
+    }
+    const history = document.trackingHistory.map((entry) => {
+      return {
+        id: entry.id,
+        action: entry.receivingDept
+          ? `Recebido pelo Setor ${entry.receivingDeptRef?.description}`
+          : `Enviado para o Setor ${entry.sendingDeptRef?.description}`,
+        date: entry.createdAt.toISOString(),
+        sendingDepartment: entry.sendingDeptRef?.description,
+        receivingDepartment: entry.receivingDeptRef?.description,
+      }
+    })
+    const fullHistory = [
+      {
+        id: 0,
+        action: "Documento criado com status 'Novo'",
+        date: document.createdAt.toISOString(),
+        sendingDepartment: null,
+        receivingDepartment: null,
+      },
+      ...history,
+    ]
+
+    const status = inferDocumentStatus(
+      document.trackingHistory,
+      document.isReceived
+    )
+
+    res.status(200).json({
+      status,
+      history: fullHistory,
+    })
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar histórico do documento" })
+  }
 }

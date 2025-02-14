@@ -20,17 +20,19 @@ model Department {
 }
 
 model Document {
-  id              Int               @id @default(autoincrement())
-  type            String
-  title           String
-  description     String
-  file            String
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @default(now())
-  trackingHistory HistoryTracking[]
-  department      Department?       @relation(fields: [departmentId], references: [id])
-  departmentId    Int?
-  sectorShipping  String?
+  id               Int               @id @default(autoincrement())
+  type             String
+  title            String
+  description      String
+  file             String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now())
+  trackingHistory  HistoryTracking[]
+  department       Department?       @relation(fields: [departmentId], references: [id])
+  departmentId     Int?
+  sectorShipping   String?
+  isReceived       Boolean           @default(false)
+  dateTimeReceived DateTime?         @default(now())
 }
 
 model HistoryTracking {
@@ -44,4 +46,5 @@ model HistoryTracking {
   receivingDeptRef Department  @relation(name: "receivedFromDepartment", fields: [receivingDept], references: [id])
   department       Department? @relation(fields: [departmentId], references: [id])
   departmentId     Int?
+  createdAt        DateTime    @default(now())
 }

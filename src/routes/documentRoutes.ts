@@ -6,6 +6,7 @@ import {
   sendDocument,
   receiveDocument,
   deleteDocument,
+  getDocumentHistory,
 } from "../controllers/documentController"
 import { upload } from "../middleware/upload"
 
@@ -25,4 +26,9 @@ router.post("/receive", async (req, res) => {
 router.delete("/:number", async (req, res) => {
   await deleteDocument(req, res)
 })
+
+router.get("/documents/:documentId/history", async (req, res) => {
+  await getDocumentHistory(req, res)
+})
+
 export default router
