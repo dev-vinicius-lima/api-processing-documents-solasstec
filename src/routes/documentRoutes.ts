@@ -7,6 +7,7 @@ import {
   receiveDocument,
   deleteDocument,
   getDocumentHistory,
+  listAllDocumentsWithHistory,
 } from "../controllers/documentController"
 import { upload } from "../middleware/upload"
 
@@ -14,6 +15,9 @@ const router = express.Router()
 
 router.post("/", upload.single("pdfFile"), createDocument)
 
+router.get("/history", async (req, res) => {
+  await listAllDocumentsWithHistory(req, res)
+})
 router.get("/", listDocuments)
 router.get("/:number", getDocumentByNumber)
 
@@ -27,7 +31,7 @@ router.delete("/:number", async (req, res) => {
   await deleteDocument(req, res)
 })
 
-router.get("/documents/:documentId/history", async (req, res) => {
+router.get("/:documentId/history", async (req, res) => {
   await getDocumentHistory(req, res)
 })
 

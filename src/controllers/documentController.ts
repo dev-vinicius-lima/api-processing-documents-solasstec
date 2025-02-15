@@ -59,6 +59,7 @@ export const getDocumentByNumber = async (
   res: Response
 ): Promise<void> => {
   const { number } = req.params
+  const documentId = parseInt(number)
 
   const document = await prisma.document.findUnique({
     where: { id: Number(number) },
@@ -130,6 +131,56 @@ export const listDocuments = async (req: Request, res: Response) => {
     res.status(200).json(transformedDocuments)
   } catch (error) {
     res.status(500).json({ error: "Error listing documents" })
+  }
+}
+
+export const listAllDocumentsWithHistory = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const documents = await prisma.document.findMany({
+      include: {
+        trackingHistory: {
+          include: {
+            sendingDeptRef: true,
+            receivingDeptRef: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    })
+
+    const transformedDocuments = documents.map((doc) => {
+      const history = doc.trackingHistory.map((entry) => ({
+        id: entry.documentId,
+        action: entry.receivingDept
+          ? `Recebido pelo Setor ${entry.receivingDeptRef?.description}`
+          : `Enviado para o Setor ${entry.sendingDeptRef?.description}`,
+        date: entry.createdAt.toISOString(),
+        sendingDepartment: entry.sendingDeptRef?.description,
+        receivingDepartment: entry.receivingDeptRef?.description,
+      }))
+
+      return {
+        id: doc.id,
+        type: doc.type,
+        title: doc.title,
+        description: doc.description,
+        file: doc.file,
+        createdAt: doc.createdAt,
+        isReceived: doc.isReceived,
+        status: inferDocumentStatus(doc.trackingHistory, doc.isReceived),
+        history,
+      }
+    })
+
+    res.status(200).json(transformedDocuments)
+  } catch (error) {
+    console.error("Erro ao listar documentos com histórico:", error)
+    res.status(500).json({ error: "Erro ao listar documentos com histórico" })
   }
 }
 
@@ -266,6 +317,7 @@ const inferDocumentStatus = (trackingHistory: any[], isReceived: boolean) => {
     return "Novo"
   }
 }
+
 export const getDocumentHistory = async (req: Request, res: Response) => {
   const { documentId } = req.params
   try {
