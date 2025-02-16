@@ -226,14 +226,6 @@ export const sendDocument = async (req: Request, res: Response) => {
       .json({ message: "Sending department does not exist" })
   }
 
-  const lastHistoryEntry =
-    document.trackingHistory[document.trackingHistory.length - 1]
-  if (lastHistoryEntry) {
-    if (lastHistoryEntry.receivingDept) {
-      return res.status(400).json({ message: "Documento já foi enviado." })
-    }
-  }
-
   const historyEntry = await prisma.historyTracking.create({
     data: {
       documentId: document.id,
