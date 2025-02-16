@@ -215,7 +215,7 @@ export const sendDocument = async (req: Request, res: Response) => {
   const sendingDepartmentId = document.departmentId
   if (sendingDepartmentId === receivingDepartmentId) {
     return res.status(400).json({
-      message: "O setor de envio deve ser diferente do de recebimento",
+      message: "O setor de envio deve ser diferente do setor de recebimento",
     })
   }
 

@@ -32,7 +32,7 @@ model Document {
   departmentId     Int?
   sectorShipping   String?
   isReceived       Boolean           @default(false)
-  dateTimeReceived DateTime?         @default(now())
+  dateTimeReceived DateTime?
 }
 
 model HistoryTracking {
