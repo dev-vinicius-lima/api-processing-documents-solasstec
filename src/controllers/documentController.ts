@@ -179,14 +179,11 @@ export const listAllDocumentsWithHistory = async (
 
     res.status(200).json(transformedDocuments)
   } catch (error) {
-    console.error("Erro ao listar documentos com histórico:", error)
     res.status(500).json({ error: "Erro ao listar documentos com histórico" })
   }
 }
 
 export const sendDocument = async (req: Request, res: Response) => {
-  console.log("Received body:", req.body)
-
   const { documentId, receivingDepartmentId } = req.body
 
   if (!documentId) {
