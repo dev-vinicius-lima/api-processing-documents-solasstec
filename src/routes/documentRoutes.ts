@@ -10,6 +10,7 @@ import {
   listAllDocumentsWithHistory,
 } from "../controllers/documentController"
 import { upload } from "../middleware/upload"
+import { downloadDocument } from "../controllers/downloadingDocumentController"
 
 const router = express.Router()
 
@@ -33,6 +34,10 @@ router.delete("/:number", async (req, res) => {
 
 router.get("/:documentId/history", async (req, res) => {
   await getDocumentHistory(req, res)
+})
+
+router.get("/download/:fileName", async (req, res) => {
+  await downloadDocument(req, res)
 })
 
 export default router
